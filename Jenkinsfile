@@ -1,5 +1,8 @@
 pipeline {
   agent any
+  environment {
+    docker_username = "ramaverdant"
+  }
   stages {
     stage("clone down") {
       agent { label "swarm" }
@@ -45,6 +48,20 @@ pipeline {
             junit 'app/build/test-results/test/TEST-*.xml'
           }
         }
+      }
+    }
+    stage ("push to docker hub") {
+      environment {
+            DOCKERCREDS = credentials('docker_login') //use the credentials just created in this stage
+      }
+      steps {
+            unstash 'code' //unstash the repository code
+            sh "echo $DOCKERCREDS_USR"
+            sh "echo $DOCKERCREDS_PSW"
+            sh "echo $DOCKERCREDS"
+            sh 'ci/build-docker.sh'
+            sh 'echo "$DOCKERCREDS_PSW" | docker login -u "$DOCKERCREDS_USR" --password-stdin' //login to docker hub with the credentials above
+            sh 'ci/push-docker.sh'
       }
     }
   }
